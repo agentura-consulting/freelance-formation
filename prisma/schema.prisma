@@ -1,0 +1,335 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/freelance_formation/app/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// Model for NextAuth compatibility
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Main User model with roles
+model User {
+  id          String      @id @default(cuid())
+  email       String      @unique
+  password    String?
+  fullName    String
+  role        Role        @default(APPRENANT)
+  clientType  ClientType  @default(EN_LIGNE)
+  image       String?
+  bio         String?     @db.Text
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // NextAuth relations
+  accounts    Account[]
+  sessions    Session[]
+  
+  // Platform relations
+  formations       Formation[]       // Formations créées par le formateur
+  enrollments      Enrollment[]      // Inscriptions de l'apprenant
+  posts            Post[]            // Publications de l'utilisateur
+  comments         Comment[]         // Commentaires de l'utilisateur
+  reactions        Reaction[]        // Réactions de l'utilisateur
+  shares           Share[]           // Partages de l'utilisateur
+  sentMessages     Message[]         @relation("SentMessages")
+  receivedMessages Message[]         @relation("ReceivedMessages")
+  coachingNotes    CoachingNote[]    // Notes de coaching (formateur)
+  coachingReceived CoachingNote[]    @relation("CoachingReceiver")
+  exerciseSubmissions ExerciseSubmission[]
+  
+  @@map("users")
+}
+
+// Formation model
+model Formation {
+  id              String          @id @default(cuid())
+  title           String
+  description     String          @db.Text
+  thumbnail       String?
+  category        String
+  level           Level           @default(DEBUTANT)
+  isPublished     Boolean         @default(false)
+  
+  // Paramètres d'accessibilité
+  accessType      AccessType      @default(MANUAL)
+  targetClientType ClientType?    // null = tous, ou PRESENTIEL/EN_LIGNE
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  // Relations
+  creatorId       String
+  creator         User            @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  files           FormationFile[]
+  modules         Module[]
+  enrollments     Enrollment[]
+  
+  @@map("formations")
+}
+
+// Formation files (videos, PDFs, etc.)
+model FormationFile {
+  id               String   @id @default(cuid())
+  title            String
+  filename         String
+  fileType         String
+  fileSize         BigInt
+  cloud_storage_path String
+  mimeType         String
+  order            Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relations
+  formationId String
+  formation   Formation @relation(fields: [formationId], references: [id], onDelete: Cascade)
+  
+  @@map("formation_files")
+}
+
+// Enrollment model for learners
+model Enrollment {
+  id          String   @id @default(cuid())
+  progress    Float    @default(0) // Progression en pourcentage
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  userId      String
+  formationId String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  formation   Formation @relation(fields: [formationId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, formationId])
+  @@map("enrollments")
+}
+
+// Module model - structure des formations
+model Module {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  formationId String
+  formation   Formation @relation(fields: [formationId], references: [id], onDelete: Cascade)
+  exercises   Exercise[]
+  
+  @@map("modules")
+}
+
+// Exercise model - exercices dans les modules
+model Exercise {
+  id          String       @id @default(cuid())
+  title       String
+  description String       @db.Text
+  type        ExerciseType @default(TEXT)
+  required    Boolean      @default(false)
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  // Relations
+  moduleId    String
+  module      Module       @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  submissions ExerciseSubmission[]
+  
+  @@map("exercises")
+}
+
+// Exercise submission - soumissions des apprenants
+model ExerciseSubmission {
+  id          String   @id @default(cuid())
+  content     String   @db.Text
+  isApproved  Boolean  @default(false)
+  feedback    String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  exerciseId  String
+  userId      String
+  exercise    Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([exerciseId, userId])
+  @@map("exercise_submissions")
+}
+
+// Post model - publications communauté
+model Post {
+  id          String   @id @default(cuid())
+  content     String   @db.Text
+  isPinned    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments    Comment[]
+  reactions   Reaction[]
+  shares      Share[]
+  
+  @@map("posts")
+}
+
+// Comment model - commentaires sur les publications
+model Comment {
+  id          String   @id @default(cuid())
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  postId      String
+  authorId    String
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  @@map("comments")
+}
+
+// Reaction model - réactions sur les publications
+model Reaction {
+  id          String       @id @default(cuid())
+  type        ReactionType @default(LIKE)
+  createdAt   DateTime     @default(now())
+  
+  // Relations
+  postId      String
+  userId      String
+  post        Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([postId, userId])
+  @@map("reactions")
+}
+
+// Share model - partages de publications
+model Share {
+  id          String   @id @default(cuid())
+  comment     String?  @db.Text
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  postId      String
+  userId      String
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("shares")
+}
+
+// Message model - messagerie simple
+model Message {
+  id          String   @id @default(cuid())
+  content     String   @db.Text
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  senderId    String
+  receiverId  String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  @@map("messages")
+}
+
+// CoachingNote model - suivi de coaching
+model CoachingNote {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  isVisible   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  coachId     String
+  clientId    String
+  coach       User     @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  client      User     @relation("CoachingReceiver", fields: [clientId], references: [id], onDelete: Cascade)
+  
+  @@map("coaching_notes")
+}
+
+// Enums
+enum Role {
+  APPRENANT
+  FORMATEUR_ADMIN
+  ADMIN
+}
+
+enum Level {
+  DEBUTANT
+  INTERMEDIAIRE
+  AVANCE
+}
+
+enum ClientType {
+  PRESENTIEL
+  EN_LIGNE
+}
+
+enum AccessType {
+  MANUAL      // Validation manuelle par le formateur
+  VIDEO       // Accessible après visionnage de vidéos
+  EXERCISE    // Accessible après validation d'exercices
+}
+
+enum ExerciseType {
+  TEXT        // Texte libre
+  FILE        // Upload de fichier
+  QUIZ        // Quiz à choix multiples
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  SUPPORT
+  CELEBRATE
+}
