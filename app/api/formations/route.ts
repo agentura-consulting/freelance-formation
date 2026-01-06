@@ -1,4 +1,3 @@
-
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
@@ -9,7 +8,7 @@ import { prisma } from "@/lib/db";
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session || (session.user as any)?.role !== "FORMATEUR_ADMIN") {
       return NextResponse.json(
         { error: "Accès non autorisé" },
@@ -33,7 +32,7 @@ export async function POST(req: NextRequest) {
         category,
         level: level as "DEBUTANT" | "INTERMEDIAIRE" | "AVANCE",
         creatorId: (session.user as any).id,
-      }
+      },
     });
 
     return NextResponse.json(formation, { status: 201 });
@@ -60,19 +59,21 @@ export async function GET(req: NextRequest) {
       where: whereClause,
       include: {
         creator: { select: { fullName: true } },
-        _count: { select: { enrollments: true } }
+        _count: { select: { enrollments: true } },
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
 
     // Convertir BigInt en string pour éviter les erreurs de sérialisation JSON
-    const formationsFormatted = formations.map(formation => ({
-      ...formation,
-      _count: {
-        ...formation._count,
-        enrollments: Number(formation._count.enrollments)
-      }
-    }));
+    const formationsFormatted = formations.map(
+      (formation: (typeof formations)[number]) => ({
+        ...formation,
+        _count: {
+          ...formation._count,
+          enrollments: Number(formation._count.enrollments),
+        },
+      })
+    );
 
     return NextResponse.json(formationsFormatted);
   } catch (error) {

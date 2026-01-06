@@ -1,4 +1,3 @@
-
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -17,15 +16,15 @@ export default async function FormationPublicPage({ params }: PageProps) {
 
   // Récupérer la formation
   const formation = await prisma.formation.findFirst({
-    where: { 
+    where: {
       id,
-      isPublished: true 
+      isPublished: true,
     },
     include: {
       creator: { select: { fullName: true } },
-      files: { orderBy: { order: 'asc' } },
-      _count: { select: { enrollments: true } }
-    }
+      files: { orderBy: { order: "asc" } },
+      _count: { select: { enrollments: true } },
+    },
   });
 
   if (!formation) {
@@ -37,7 +36,8 @@ export default async function FormationPublicPage({ params }: PageProps) {
               Formation non trouvée
             </h1>
             <p className="text-gray-600 mb-6">
-              Cette formation n&apos;existe pas ou n&apos;est pas encore publiée.
+              Cette formation n&apos;existe pas ou n&apos;est pas encore
+              publiée.
             </p>
             <Link href="/formations">
               <button className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700">
@@ -57,9 +57,9 @@ export default async function FormationPublicPage({ params }: PageProps) {
       where: {
         userId_formationId: {
           userId: (session.user as any).id,
-          formationId: id
-        }
-      }
+          formationId: id,
+        },
+      },
     });
     isEnrolled = !!enrollment;
   }
@@ -67,18 +67,19 @@ export default async function FormationPublicPage({ params }: PageProps) {
   // Convertir BigInt en string pour éviter les erreurs de sérialisation JSON
   const formationFormatted = {
     ...formation,
-    files: formation.files?.map(file => ({
-      ...file,
-      fileSize: file.fileSize.toString()
-    })) || [],
+    files:
+      formation.files?.map((file: (typeof formation.files)[number]) => ({
+        ...file,
+        fileSize: file.fileSize.toString(),
+      })) || [],
     _count: {
       ...formation._count,
-      enrollments: Number(formation._count.enrollments)
-    }
+      enrollments: Number(formation._count.enrollments),
+    },
   };
 
   return (
-    <FormationPublicClient 
+    <FormationPublicClient
       formation={formationFormatted}
       session={session}
       isEnrolled={isEnrolled}

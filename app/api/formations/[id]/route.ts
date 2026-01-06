@@ -1,5 +1,3 @@
-
-
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -11,19 +9,52 @@ interface RouteParams {
   };
 }
 
+interface FormationFileFormatted {
+  id: string;
+  name: string;
+  url: string;
+  fileSize: string;
+  order: number;
+  formationId: string;
+}
+
+type PrismaFormationFile = {
+  id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  title: string;
+  formationId: string;
+  filename: string;
+  fileType: string;
+  fileSize: bigint;
+  cloud_storage_path: string;
+  mimeType: string;
+  order: number;
+};
+
+// Fonction utilitaire pour formater les fichiers
+function formatFiles(files: PrismaFormationFile[]): FormationFileFormatted[] {
+  return files.map((file) => ({
+    id: file.id,
+    name: file.filename,
+    url: file.cloud_storage_path,
+    fileSize: file.fileSize.toString(),
+    order: file.order,
+    formationId: file.formationId,
+  }));
+}
+
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = params;
-    
+
     const formation = await prisma.formation.findUnique({
       where: { id },
       include: {
         creator: { select: { fullName: true } },
-        files: { 
-          orderBy: { order: 'asc' }
-        },
-        _count: { select: { enrollments: true } }
-      }
+        files: { orderBy: { order: "asc" } },
+        _count: { select: { enrollments: true } },
+      },
     });
 
     if (!formation) {
@@ -33,17 +64,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Convertir BigInt en string
     const formationFormatted = {
       ...formation,
-      files: formation.files.map(file => ({
-        ...file,
-        fileSize: file.fileSize.toString()
-      })),
+      files: formatFiles(formation.files),
       _count: {
         ...formation._count,
-        enrollments: Number(formation._count.enrollments)
-      }
+        enrollments: Number(formation._count.enrollments),
+      },
     };
 
     return NextResponse.json(formationFormatted);
@@ -59,12 +86,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
-      return NextResponse.json(
-        { error: "Non authentifié" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
     const { id } = params;
@@ -72,7 +96,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const userRole = (session.user as any)?.role;
     const userId = (session.user as any)?.id;
 
-    // Vérifier les permissions
     if (userRole !== "ADMIN" && userRole !== "FORMATEUR_ADMIN") {
       return NextResponse.json(
         { error: "Accès non autorisé" },
@@ -80,11 +103,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Si formateur, vérifier qu'il est le créateur
     if (userRole === "FORMATEUR_ADMIN") {
       const formation = await prisma.formation.findUnique({
         where: { id },
-        select: { creatorId: true }
+        select: { creatorId: true },
       });
 
       if (!formation || formation.creatorId !== userId) {
@@ -99,26 +121,24 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       where: { id },
       data: {
         ...data,
-        ...(data.level && { level: data.level as "DEBUTANT" | "INTERMEDIAIRE" | "AVANCE" })
+        ...(data.level && {
+          level: data.level as "DEBUTANT" | "INTERMEDIAIRE" | "AVANCE",
+        }),
       },
       include: {
         creator: { select: { fullName: true } },
-        files: { orderBy: { order: 'asc' } },
-        _count: { select: { enrollments: true } }
-      }
+        files: { orderBy: { order: "asc" } },
+        _count: { select: { enrollments: true } },
+      },
     });
 
-    // Convertir BigInt en string
     const formationFormatted = {
       ...updatedFormation,
-      files: updatedFormation.files.map(file => ({
-        ...file,
-        fileSize: file.fileSize.toString()
-      })),
+      files: formatFiles(updatedFormation.files),
       _count: {
         ...updatedFormation._count,
-        enrollments: Number(updatedFormation._count.enrollments)
-      }
+        enrollments: Number(updatedFormation._count.enrollments),
+      },
     };
 
     return NextResponse.json(formationFormatted);
@@ -134,29 +154,21 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
-      return NextResponse.json(
-        { message: "Non authentifié" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Non authentifié" }, { status: 401 });
     }
 
     const userRole = (session.user as any)?.role;
     const userId = (session.user as any)?.id;
     const { id } = params;
 
-    // Vérifier si c'est un admin ou le créateur de la formation
     if (userRole === "ADMIN") {
-      // L'admin peut supprimer toute formation
-      await prisma.formation.delete({
-        where: { id }
-      });
+      await prisma.formation.delete({ where: { id } });
     } else if (userRole === "FORMATEUR_ADMIN") {
-      // Le formateur ne peut supprimer que ses propres formations
       const formation = await prisma.formation.findUnique({
         where: { id },
-        select: { creatorId: true }
+        select: { creatorId: true },
       });
 
       if (!formation || formation.creatorId !== userId) {
@@ -166,9 +178,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         );
       }
 
-      await prisma.formation.delete({
-        where: { id }
-      });
+      await prisma.formation.delete({ where: { id } });
     } else {
       return NextResponse.json(
         { message: "Accès non autorisé" },
@@ -177,13 +187,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     return NextResponse.json({ message: "Formation supprimée avec succès" });
-
   } catch (error) {
-    console.error("Error deleting formation:", error);
+    console.error("Erreur lors de la suppression de la formation:", error);
     return NextResponse.json(
       { message: "Erreur lors de la suppression de la formation" },
       { status: 500 }
     );
   }
 }
-

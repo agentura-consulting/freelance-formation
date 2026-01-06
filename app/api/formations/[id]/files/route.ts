@@ -1,4 +1,3 @@
-
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
@@ -14,7 +13,7 @@ interface RouteContext {
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session || (session.user as any)?.role !== "FORMATEUR_ADMIN") {
       return NextResponse.json(
         { error: "Accès non autorisé" },
@@ -24,10 +23,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     const { id } = await context.params;
     const formData = await req.formData();
-    
+
     const file = formData.get("file") as File;
     const title = formData.get("title") as string;
-    const order = parseInt(formData.get("order") as string || "0");
+    const order = parseInt((formData.get("order") as string) || "0");
 
     if (!file || !title) {
       return NextResponse.json(
@@ -40,8 +39,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const formation = await prisma.formation.findFirst({
       where: {
         id,
-        creatorId: (session.user as any).id
-      }
+        creatorId: (session.user as any).id,
+      },
     });
 
     if (!formation) {
@@ -56,7 +55,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const cloud_storage_path = await uploadFile(buffer, file.name);
 
     // Déterminer le type de fichier
-    const fileType = file.type.startsWith('video/') ? 'video' : 'document';
+    const fileType = file.type.startsWith("video/") ? "video" : "document";
 
     // Sauvegarder en base
     const formationFile = await prisma.formationFile.create({
@@ -68,14 +67,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
         cloud_storage_path,
         mimeType: file.type,
         order,
-        formationId: id
-      }
+        formationId: id,
+      },
     });
 
     // Convertir BigInt en string
     const fileFormatted = {
       ...formationFile,
-      fileSize: formationFile.fileSize.toString()
+      fileSize: formationFile.fileSize.toString(),
     };
 
     return NextResponse.json(fileFormatted, { status: 201 });
@@ -91,16 +90,16 @@ export async function POST(req: NextRequest, context: RouteContext) {
 export async function GET(req: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
-    
+
     const files = await prisma.formationFile.findMany({
       where: { formationId: id },
-      orderBy: { order: 'asc' }
+      orderBy: { order: "asc" },
     });
 
     // Convertir BigInt en string
-    const filesFormatted = files.map(file => ({
+    const filesFormatted = files.map((file: (typeof files)[number]) => ({
       ...file,
-      fileSize: file.fileSize.toString()
+      fileSize: file.fileSize.toString(),
     }));
 
     return NextResponse.json(filesFormatted);

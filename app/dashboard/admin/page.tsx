@@ -1,5 +1,3 @@
-
-
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
@@ -33,58 +31,66 @@ export default async function AdminDashboard() {
     totalEnrollments,
     recentUsers,
     recentFormations,
-    allUsers
+    allUsers,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.formation.count(),
     prisma.enrollment.count(),
     prisma.user.findMany({
       take: 5,
-      orderBy: { createdAt: 'desc' },
-      select: { id: true, email: true, fullName: true, role: true, createdAt: true }
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        createdAt: true,
+      },
     }),
     prisma.formation.findMany({
       take: 5,
-      orderBy: { createdAt: 'desc' },
-      include: { creator: { select: { fullName: true } } }
+      orderBy: { createdAt: "desc" },
+      include: { creator: { select: { fullName: true } } },
     }),
     prisma.user.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: { 
-        id: true, 
-        email: true, 
-        fullName: true, 
-        role: true, 
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
         createdAt: true,
         _count: {
           select: {
             formations: true,
-            enrollments: true
-          }
-        }
-      }
-    })
+            enrollments: true,
+          },
+        },
+      },
+    }),
   ]);
 
   const formations = await prisma.formation.findMany({
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     include: {
       creator: { select: { fullName: true, email: true } },
-      _count: { select: { enrollments: true } }
-    }
+      _count: { select: { enrollments: true } },
+    },
   });
 
   const stats = {
     totalUsers,
     totalFormations,
     totalEnrollments,
-    publishedFormations: formations.filter(f => f.isPublished).length
+    publishedFormations: formations.filter(
+      (f: (typeof formations)[number]) => f.isPublished
+    ).length,
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* En-tête */}
         <div className="mb-8">
@@ -118,18 +124,24 @@ export default async function AdminDashboard() {
 
           {/* Gestion des utilisateurs */}
           <TabsContent value="users">
-            <AdminUsersList users={allUsers.map(user => ({
-              ...user,
-              createdAt: user.createdAt.toISOString()
-            }))} />
+            <AdminUsersList
+              users={allUsers.map((user: (typeof allUsers)[number]) => ({
+                ...user,
+                createdAt: user.createdAt.toISOString(),
+              }))}
+            />
           </TabsContent>
 
           {/* Gestion des formations */}
           <TabsContent value="formations">
-            <AdminFormationsList formations={formations.map(formation => ({
-              ...formation,
-              createdAt: formation.createdAt.toISOString()
-            }))} />
+            <AdminFormationsList
+              formations={formations.map(
+                (formation: (typeof formations)[number]) => ({
+                  ...formation,
+                  createdAt: formation.createdAt.toISOString(),
+                })
+              )}
+            />
           </TabsContent>
 
           {/* Statistiques détaillées */}
@@ -142,25 +154,35 @@ export default async function AdminDashboard() {
                 <CardContent>
                   <div className="grid md:grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="font-medium text-gray-600 mb-2">Utilisateurs récents</p>
+                      <p className="font-medium text-gray-600 mb-2">
+                        Utilisateurs récents
+                      </p>
                       <ul className="space-y-1">
-                        {recentUsers.map((user) => (
-                          <li key={user.id} className="flex justify-between">
-                            <span>{user.fullName}</span>
-                            <span className="text-gray-500">{user.role}</span>
-                          </li>
-                        ))}
+                        {recentUsers.map(
+                          (user: (typeof recentUsers)[number]) => (
+                            <li key={user.id} className="flex justify-between">
+                              <span>{user.fullName}</span>
+                              <span className="text-gray-500">{user.role}</span>
+                            </li>
+                          )
+                        )}
                       </ul>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-600 mb-2">Formations récentes</p>
+                      <p className="font-medium text-gray-600 mb-2">
+                        Formations récentes
+                      </p>
                       <ul className="space-y-1">
-                        {recentFormations.map((formation) => (
-                          <li key={formation.id} className="text-sm">
-                            <p className="font-medium">{formation.title}</p>
-                            <p className="text-gray-500">par {formation.creator.fullName}</p>
-                          </li>
-                        ))}
+                        {recentFormations.map(
+                          (formation: (typeof recentFormations)[number]) => (
+                            <li key={formation.id} className="text-sm">
+                              <p className="font-medium">{formation.title}</p>
+                              <p className="text-gray-500">
+                                par {formation.creator.fullName}
+                              </p>
+                            </li>
+                          )
+                        )}
                       </ul>
                     </div>
                   </div>
@@ -173,4 +195,3 @@ export default async function AdminDashboard() {
     </div>
   );
 }
-

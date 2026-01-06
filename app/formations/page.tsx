@@ -1,4 +1,3 @@
-
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -13,44 +12,61 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+// Définition du type d'une formation pour typer correctement map, reduce, etc.
+type Formation = {
+  id: string;
+  title: string;
+  description: string;
+  thumbnail?: string | null;
+  category: string;
+  level: string;
+  isPublished: boolean;
+  creator: { fullName: string };
+  _count?: { enrollments: number };
+  createdAt: Date;
+};
+
 export default async function FormationsPage() {
   const session = await getServerSession(authOptions);
 
   // Récupérer toutes les formations publiées
-  const formations = await prisma.formation.findMany({
+  const formationsRaw = await prisma.formation.findMany({
     where: { isPublished: true },
     include: {
       creator: { select: { fullName: true } },
-      _count: { select: { enrollments: true } }
+      _count: { select: { enrollments: true } },
     },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: "desc" },
   });
 
+  // On force le typage pour TypeScript
+  const formations: Formation[] = formationsRaw as Formation[];
+
   // Récupérer les catégories uniques
-  const categories = [...new Set(formations.map(f => f.category))];
-  
+  const categories: string[] = [
+    ...new Set(formations.map((f: Formation) => f.category)),
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       {session && <Header />}
-      
+
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {!session && (
           <div className="mb-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <BookOpen className="h-8 w-8 text-blue-600" />
-                <span className="text-2xl font-bold text-gray-900">Digital Mada Academy</span>
+                <span className="text-2xl font-bold text-gray-900">
+                  Digital Mada Academy
+                </span>
               </div>
               <div className="flex items-center space-x-3">
                 <Link href="/auth/signin">
-                  <Button variant="ghost">
-                    Se connecter
-                  </Button>
+                  <Button variant="ghost">Se connecter</Button>
                 </Link>
                 <Link href="/auth/signup">
-                  <Button>
-                    Créer un compte
-                  </Button>
+                  <Button>Créer un compte</Button>
                 </Link>
               </div>
             </div>
@@ -63,7 +79,8 @@ export default async function FormationsPage() {
             Catalogue des formations
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Découvrez toutes nos formations gratuites pour développer vos compétences professionnelles
+            Découvrez toutes nos formations gratuites pour développer vos
+            compétences professionnelles
           </p>
         </div>
 
@@ -80,12 +97,12 @@ export default async function FormationsPage() {
                   />
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary" className="cursor-pointer">
                   Toutes
                 </Badge>
-                {categories.map((category) => (
+                {categories.map((category: string) => (
                   <Badge
                     key={category}
                     variant="outline"
@@ -103,16 +120,17 @@ export default async function FormationsPage() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">
-              {formations.length} formation{formations.length > 1 ? 's' : ''} disponible{formations.length > 1 ? 's' : ''}
+              {formations.length} formation{formations.length > 1 ? "s" : ""}{" "}
+              disponible{formations.length > 1 ? "s" : ""}
             </h2>
             <Badge variant="outline" className="text-green-600">
               Gratuit pour tous
             </Badge>
           </div>
-          
+
           {formations.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {formations.map((formation) => (
+              {formations.map((formation: Formation) => (
                 <FormationCard
                   key={formation.id}
                   formation={formation}
@@ -128,13 +146,12 @@ export default async function FormationsPage() {
                   Aucune formation disponible
                 </h3>
                 <p className="text-gray-600 mb-4">
-                  Les formations seront ajoutées prochainement par nos formateurs.
+                  Les formations seront ajoutées prochainement par nos
+                  formateurs.
                 </p>
                 {!session && (
                   <Link href="/auth/signup">
-                    <Button>
-                      Créer un compte pour être notifié
-                    </Button>
+                    <Button>Créer un compte pour être notifié</Button>
                   </Link>
                 )}
               </CardContent>

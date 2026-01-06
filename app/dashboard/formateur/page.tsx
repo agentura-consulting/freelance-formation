@@ -1,11 +1,16 @@
-
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Header } from "@/components/header";
 import { FormateurDashboardClient } from "@/components/formateur-dashboard-client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -32,28 +37,40 @@ export default async function FormateurDashboard() {
     where: { creatorId: userId },
     include: {
       creator: { select: { fullName: true } },
-      _count: { 
-        select: { 
+      _count: {
+        select: {
           enrollments: true,
-          files: true
-        } 
-      }
+          files: true,
+        },
+      },
     },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: "desc" },
   });
 
   // Statistiques
   const stats = {
     totalFormations: formations?.length || 0,
-    publishedFormations: formations?.filter(f => f.isPublished)?.length || 0,
-    totalEnrollments: formations?.reduce((acc, f) => acc + (f._count?.enrollments || 0), 0) || 0,
-    totalFiles: formations?.reduce((acc, f) => acc + (f._count?.files || 0), 0) || 0,
+    publishedFormations:
+      formations?.filter((f: (typeof formations)[number]) => f.isPublished)
+        ?.length || 0,
+    totalEnrollments:
+      formations?.reduce(
+        (acc: number, f: (typeof formations)[number]) =>
+          acc + (f._count?.enrollments || 0),
+        0
+      ) || 0,
+    totalFiles:
+      formations?.reduce(
+        (acc: number, f: (typeof formations)[number]) =>
+          acc + (f._count?.files || 0),
+        0
+      ) || 0,
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* En-tête */}
         <div className="flex items-center justify-between mb-8">
@@ -83,19 +100,21 @@ export default async function FormateurDashboard() {
               <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.totalFormations}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {stats.totalFormations}
+              </div>
             </CardContent>
           </Card>
 
           <Card className="border-0 shadow-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Publiées
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">Publiées</CardTitle>
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.publishedFormations}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {stats.publishedFormations}
+              </div>
             </CardContent>
           </Card>
 
@@ -107,7 +126,9 @@ export default async function FormateurDashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600">{stats.totalEnrollments}</div>
+              <div className="text-2xl font-bold text-purple-600">
+                {stats.totalEnrollments}
+              </div>
             </CardContent>
           </Card>
 
@@ -119,7 +140,9 @@ export default async function FormateurDashboard() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats.totalFiles}</div>
+              <div className="text-2xl font-bold text-orange-600">
+                {stats.totalFiles}
+              </div>
             </CardContent>
           </Card>
         </div>

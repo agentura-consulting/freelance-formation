@@ -1,11 +1,16 @@
-
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { Header } from "@/components/header";
 import { FormationCard } from "@/components/formation-card";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Trophy, Clock, Users, ClipboardList } from "lucide-react";
 
@@ -32,29 +37,29 @@ export default async function ApprenantDashboard() {
       formation: {
         include: {
           creator: { select: { fullName: true } },
-          _count: { select: { enrollments: true } }
-        }
-      }
+          _count: { select: { enrollments: true } },
+        },
+      },
     },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: "desc" },
   });
 
   // Récupérer toutes les formations publiées
   const availableFormations = await prisma.formation.findMany({
-    where: { 
+    where: {
       isPublished: true,
       NOT: {
         enrollments: {
-          some: { userId }
-        }
-      }
+          some: { userId },
+        },
+      },
     },
     include: {
       creator: { select: { fullName: true } },
-      _count: { select: { enrollments: true } }
+      _count: { select: { enrollments: true } },
     },
-    orderBy: { createdAt: 'desc' },
-    take: 6
+    orderBy: { createdAt: "desc" },
+    take: 6,
   });
 
   // Récupérer les notes de coaching visibles
@@ -68,25 +73,31 @@ export default async function ApprenantDashboard() {
         select: {
           fullName: true,
           image: true,
-        }
-      }
+        },
+      },
     },
     orderBy: {
-      createdAt: 'desc'
+      createdAt: "desc",
     },
-    take: 3
+    take: 3,
   });
 
   const stats = {
     totalEnrollments: enrollments?.length || 0,
-    completedCourses: enrollments?.filter(e => e.progress === 100)?.length || 0,
-    inProgress: enrollments?.filter(e => e.progress > 0 && e.progress < 100)?.length || 0,
+    completedCourses:
+      enrollments?.filter(
+        (e: (typeof enrollments)[number]) => e.progress === 100
+      )?.length || 0,
+    inProgress:
+      enrollments?.filter(
+        (e: (typeof enrollments)[number]) => e.progress > 0 && e.progress < 100
+      )?.length || 0,
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* En-tête */}
         <div className="mb-8">
@@ -94,7 +105,8 @@ export default async function ApprenantDashboard() {
             Bonjour {session.user?.name} 👋
           </h1>
           <p className="text-gray-600">
-            Continuez votre parcours d&apos;apprentissage avec nos formations gratuites
+            Continuez votre parcours d&apos;apprentissage avec nos formations
+            gratuites
           </p>
         </div>
 
@@ -108,7 +120,9 @@ export default async function ApprenantDashboard() {
               <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.totalEnrollments}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {stats.totalEnrollments}
+              </div>
             </CardContent>
           </Card>
 
@@ -120,19 +134,21 @@ export default async function ApprenantDashboard() {
               <Trophy className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.completedCourses}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {stats.completedCourses}
+              </div>
             </CardContent>
           </Card>
 
           <Card className="border-0 shadow-md">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                En cours
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">En cours</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats.inProgress}</div>
+              <div className="text-2xl font-bold text-orange-600">
+                {stats.inProgress}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -143,21 +159,26 @@ export default async function ApprenantDashboard() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <ClipboardList className="h-6 w-6 text-blue-600" />
-                <h2 className="text-2xl font-bold text-gray-900">Mes notes de coaching</h2>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Mes notes de coaching
+                </h2>
               </div>
               <Badge variant="secondary">
-                {coachingNotes.length} note{coachingNotes.length > 1 ? 's' : ''}
+                {coachingNotes.length} note{coachingNotes.length > 1 ? "s" : ""}
               </Badge>
             </div>
-            
+
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {coachingNotes.map((note) => (
-                <Card key={note.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">
+              {coachingNotes.map((note: (typeof coachingNotes)[number]) => (
+                <Card
+                  key={note.id}
+                  className="border-0 shadow-md hover:shadow-lg transition-shadow"
+                >
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <CardTitle className="text-lg">{note.title}</CardTitle>
                       <Badge variant="outline" className="text-xs">
-                        {new Date(note.createdAt).toLocaleDateString('fr-FR')}
+                        {new Date(note.createdAt).toLocaleDateString("fr-FR")}
                       </Badge>
                     </div>
                     <CardDescription>
@@ -179,14 +200,17 @@ export default async function ApprenantDashboard() {
         {enrollments.length > 0 && (
           <div className="mb-12">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Mes formations</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Mes formations
+              </h2>
               <Badge variant="secondary">
-                {enrollments.length} formation{enrollments.length > 1 ? 's' : ''}
+                {enrollments.length} formation
+                {enrollments.length > 1 ? "s" : ""}
               </Badge>
             </div>
-            
+
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {enrollments.map((enrollment) => (
+              {enrollments.map((enrollment: (typeof enrollments)[number]) => (
                 <FormationCard
                   key={enrollment.id}
                   formation={enrollment.formation}
@@ -203,20 +227,20 @@ export default async function ApprenantDashboard() {
             <h2 className="text-2xl font-bold text-gray-900">
               Formations disponibles
             </h2>
-            <Badge variant="outline">
-              Gratuit
-            </Badge>
+            <Badge variant="outline">Gratuit</Badge>
           </div>
-          
+
           {availableFormations.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {availableFormations.map((formation) => (
-                <FormationCard
-                  key={formation.id}
-                  formation={formation}
-                  isEnrolled={false}
-                />
-              ))}
+              {availableFormations.map(
+                (formation: (typeof availableFormations)[number]) => (
+                  <FormationCard
+                    key={formation.id}
+                    formation={formation}
+                    isEnrolled={false}
+                  />
+                )
+              )}
             </div>
           ) : (
             <Card className="border-0 shadow-md">
@@ -226,7 +250,8 @@ export default async function ApprenantDashboard() {
                   Aucune nouvelle formation disponible
                 </h3>
                 <p className="text-gray-600">
-                  Les formations seront ajoutées prochainement par nos formateurs.
+                  Les formations seront ajoutées prochainement par nos
+                  formateurs.
                 </p>
               </CardContent>
             </Card>
